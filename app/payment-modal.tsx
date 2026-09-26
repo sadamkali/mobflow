@@ -268,9 +268,7 @@ export default function PaymentModal({
           <>
             <div className="payment-modal-top">
               <div>
-                <span className="kicker">Internet access</span>
-                <h2 id="payment-modal-title">Get connected</h2>
-                <p>Choose your bundle, enter your mobile-money number, and approve the payment on your phone.</p>
+                <h2 id="payment-modal-title">Complete Payment</h2>
               </div>
               <button
                 className="modal-close"
@@ -283,12 +281,15 @@ export default function PaymentModal({
               </button>
             </div>
 
-            <div className="modal-package">
-              <div>
-                <span>Selected bundle</span>
+            <div className="modal-details">
+              <div className="modal-detail-row">
+                <span>Plan:</span>
                 <strong>{selected.durationLabel}</strong>
               </div>
-              <b>UGX {money.format(selected.amount)}</b>
+              <div className="modal-detail-row">
+                <span>Amount:</span>
+                <strong>UGX {money.format(selected.amount)}</strong>
+              </div>
             </div>
 
             {state === "failed" && (
@@ -298,41 +299,22 @@ export default function PaymentModal({
             )}
 
             <div className="field full modal-phone-field">
-              <label htmlFor="modal-msisdn">MTN or Airtel number</label>
+              <label htmlFor="modal-msisdn">Phone Number (Mobile Money)</label>
               <input
                 ref={phoneRef}
                 id="modal-msisdn"
                 value={msisdn}
                 onChange={(event) => setMsisdn(event.target.value)}
-                placeholder="07XX XXX XXX"
+                placeholder="0751000000"
                 inputMode="tel"
                 autoComplete="tel"
               />
-              <span className="field-hint">A payment prompt will appear on this number.</span>
-            </div>
-
-            <div className="summary modal-summary">
-              <div className="summary-row">
-                <span>Access time</span>
-                <strong>{selected.durationLabel}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Payment</span>
-                <strong>MTN / Airtel Mobile Money</strong>
-              </div>
-              <div className="summary-row">
-                <span>Total</span>
-                <strong>UGX {money.format(selected.amount)}</strong>
-              </div>
+              <span className="field-hint">Enter the number you will pay from.</span>
             </div>
 
             <button className="btn primary modal-pay-btn" type="button" onClick={submit}>
-              Pay UGX {money.format(selected.amount)}
+              Pay Now
             </button>
-
-            <p className="mini-note modal-note">
-              Approve the payment request on your phone. Do not close this window while we confirm it.
-            </p>
           </>
         )}
 
