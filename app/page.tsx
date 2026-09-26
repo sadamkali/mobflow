@@ -5,7 +5,6 @@ import PaymentModal, { type PortalSession } from "@/app/payment-modal";
 import { PACKAGES, type PackageId } from "@/lib/packages";
 
 const money = new Intl.NumberFormat("en-UG");
-const SESSION_KEY = "mobflow_portal_session";
 
 function formatRemaining(expiresAt: number) {
   const totalSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
@@ -15,36 +14,25 @@ function formatRemaining(expiresAt: number) {
   const seconds = totalSeconds % 60;
 
   if (days > 0) {
-    return days + "d " + String(hours).padStart(2, "0") + "h " +
-      String(minutes).padStart(2, "0") + "m " + String(seconds).padStart(2, "0") + "s";
+    return (
+      days +
+      "d " +
+      String(hours).padStart(2, "0") +
+      "h " +
+      String(minutes).padStart(2, "0") +
+      "m " +
+      String(seconds).padStart(2, "0") +
+      "s"
+    );
   }
 
-  return String(hours).padStart(2, "0") + ":" +
-    String(minutes).padStart(2, "0") + ":" +
-    String(seconds).padStart(2, "0");
-}
-
-function readSession(): PortalSession | null {
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw) as PortalSession;
-    return session.expiresAt > Date.now() ? session : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(session: PortalSession | null) {
-  try {
-    if (session) {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } else {
-      window.localStorage.removeItem(SESSION_KEY);
-    }
-  } catch {
-    // Browser storage is only a convenience for reconnecting to this portal.
-  }
+  return (
+    String(hours).padStart(2, "0") +
+    ":" +
+    String(minutes).padStart(2, "0") +
+    ":" +
+    String(seconds).padStart(2, "0")
+  );
 }
 
 export default function Home() {
@@ -53,16 +41,54 @@ export default function Home() {
   const [activeSession, setActiveSession] = useState<PortalSession | null>(null);
   const [showSession, setShowSession] = useState(false);
   const [remaining, setRemaining] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [expiredNotice, setExpiredNotice] = useState(false);
 
-  useEffect(() => {
-    const session = readSession();
-    if (session) {
-      setActiveSession(session);
-      setRemaining(formatRemaining(session.expiresAt));
-    } else {
-      saveSession(null);
+  const refreshSession = useCallback(async (showLoading = false) => {
+    if (showLoading) setCheckingSession(true);
+
+    try {
+      const response = await fetch("/api/portal/session", {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (data.active && data.session) {
+        setActiveSession(data.session);
+        setRemaining(formatRemaining(data.session.expiresAt));
+        return true;
+      }
+
+      setActiveSession(null);
+      setShowSession(false);
+      return false;
+    } catch {
+      return false;
+    } finally {
+      if (showLoading) setCheckingSession(false);
     }
   }, []);
+
+  useEffect(() => {
+    void refreshSession(true);
+  }, [refreshSession]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refreshSession(false);
+      }
+    };
+
+    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshSession]);
 
   useEffect(() => {
     if (!activeSession) {
@@ -77,7 +103,8 @@ export default function Home() {
       if (activeSession.expiresAt <= Date.now()) {
         setActiveSession(null);
         setShowSession(false);
-        saveSession(null);
+        setExpiredNotice(true);
+        void fetch("/api/portal/session", { method: "DELETE" }).catch(() => undefined);
       }
     };
 
@@ -88,13 +115,15 @@ export default function Home() {
 
   const openPayment = useCallback((packageId: PackageId) => {
     setSelectedPackage(packageId);
+    setExpiredNotice(false);
     setPaymentOpen(true);
   }, []);
 
   const handlePaymentSuccess = useCallback((session: PortalSession) => {
-    saveSession(session);
     setActiveSession(session);
+    setRemaining(formatRemaining(session.expiresAt));
     setShowSession(true);
+    setExpiredNotice(false);
     setPaymentOpen(false);
 
     window.setTimeout(() => {
@@ -103,6 +132,12 @@ export default function Home() {
         block: "center",
       });
     }, 60);
+  }, []);
+
+  const endPortalSession = useCallback(async () => {
+    await fetch("/api/portal/session", { method: "DELETE" }).catch(() => undefined);
+    setActiveSession(null);
+    setShowSession(false);
   }, []);
 
   const activePackage = useMemo(
@@ -123,10 +158,13 @@ export default function Home() {
                 <span />
               </div>
               <div>
-                <strong>Mobi<span>Flow</span></strong>
+                <strong>
+                  Mobi<span>Flow</span>
+                </strong>
                 <small>Wi-Fi access portal</small>
               </div>
             </div>
+
             <a className="portal-support" href="tel:+256772911432">
               Support · 0772 911 432
             </a>
@@ -143,6 +181,20 @@ export default function Home() {
             </p>
           </section>
 
+          {checkingSession && (
+            <div className="session-check glass" aria-live="polite">
+              <span className="mini-spinner" aria-hidden="true" />
+              <span>Checking for an active session…</span>
+            </div>
+          )}
+
+          {expiredNotice && !activeSession && (
+            <div className="session-expired glass" role="status">
+              <strong>Your session has ended.</strong>
+              <span>Choose another bundle to get back online.</span>
+            </div>
+          )}
+
           {activeSession && !showSession && (
             <div className="reconnect-bar glass">
               <div>
@@ -151,8 +203,15 @@ export default function Home() {
                   {activeSession.durationLabel} · {remaining} remaining
                 </span>
               </div>
-              <button className="btn primary" type="button" onClick={() => setShowSession(true)}>
-                Resume
+              <button
+                className="btn primary"
+                type="button"
+                onClick={() => {
+                  void refreshSession(false);
+                  setShowSession(true);
+                }}
+              >
+                Reconnect
               </button>
             </div>
           )}
@@ -161,11 +220,13 @@ export default function Home() {
             <section id="session" className="session-card glass">
               <div className="session-top">
                 <div>
-                  <span className="kicker">Session active</span>
-                  <h2>You&apos;re connected.</h2>
-                  <p>Your Internet bundle is active for this browser session.</p>
+                  <span className="kicker">Access session</span>
+                  <h2>You&apos;re back online.</h2>
+                  <p>Your current portal access session is still active.</p>
                 </div>
-                <span className="live-status"><i /> Active</span>
+                <span className="live-status">
+                  <i /> Active
+                </span>
               </div>
 
               <div className="session-timer">
@@ -194,13 +255,20 @@ export default function Home() {
 
               <div className="session-actions">
                 <button className="btn" type="button" onClick={() => setShowSession(false)}>
-                  Back to bundles
+                  View bundles
                 </button>
                 {activePackage && (
-                  <button className="btn primary" type="button" onClick={() => openPayment(activePackage.id)}>
+                  <button
+                    className="btn primary"
+                    type="button"
+                    onClick={() => openPayment(activePackage.id)}
+                  >
                     Buy another bundle
                   </button>
                 )}
+                <button className="session-end-btn" type="button" onClick={endPortalSession}>
+                  End portal session
+                </button>
               </div>
             </section>
           )}
@@ -234,7 +302,9 @@ export default function Home() {
             <div>
               <span className="kicker">Need help?</span>
               <h2>Having trouble connecting?</h2>
-              <p>Make sure the number you enter is registered for MTN or Airtel Mobile Money.</p>
+              <p>
+                Make sure the number you enter is registered for MTN or Airtel Mobile Money.
+              </p>
             </div>
             <a className="btn primary" href="tel:+256772911432">
               Call 0772 911 432
