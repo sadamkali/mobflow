@@ -32,3 +32,6 @@ The repository includes a root `vercel.json` that explicitly selects Next.js and
 
 Production note:
 Before granting any purchased package/value, add a persistent database-backed orders table and payment_events table. Use an idempotency check keyed by the Relworx internal/customer reference so repeated webhooks cannot credit the same purchase twice.
+
+
+Build verification: GitHub Actions runs `npm install` and `npm run build` on pushes to `main`.
