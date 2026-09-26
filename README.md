@@ -3,12 +3,15 @@
 Next.js landing page and Relworx Mobile Money integration prepared for Uganda.
 
 Includes:
-- Glassmorphism landing page
-- UGX 1,000 / 2,000 / 3,000 / 4,000 / 5,000 / 10,000 packages
+- Mobile-friendly glassmorphism captive-portal UI
+- Internet bundles: 1 Hour / 3 Hours / 6 Hours / 12 Hours / 1 Day / 3 Days
+- UGX 1,000 / 2,000 / 3,000 / 4,000 / 5,000 / 10,000 pricing
+- In-page mobile-money checkout modal
 - MTN + Airtel Mobile Money checkout
 - Server-side Relworx API v2 requests
 - Uganda MSISDN normalization and Relworx validation
-- Transaction status polling
+- Background payment status polling with processing states
+- Browser session countdown and previous-session resume UI
 - Signed Relworx webhook verification
 - Integration status page at /admin/integrations
 
@@ -25,6 +28,13 @@ RELWORX_WEBHOOK_SECRET=
 RELWORX_WEBHOOK_URL=https://YOUR-DOMAIN.com/api/payments/webhook
 
 Never commit .env.local or payment credentials.
+
+
+## Captive portal stage
+
+MobiFlow is currently being built as the customer-facing captive-portal/payment experience without a MikroTik or other network-enforcement integration. The browser session countdown is a temporary UI/session layer for this stage; it does not by itself grant or revoke network access.
+
+When a router/hotspot is introduced later, the successful payment event should be connected to the network authorization/session layer rather than trusting localStorage as the source of access.
 
 ## Vercel
 
