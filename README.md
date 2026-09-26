@@ -11,7 +11,8 @@ Includes:
 - Server-side Relworx API v2 requests
 - Uganda MSISDN normalization and Relworx validation
 - Background payment status polling with processing states
-- Browser session countdown and previous-session resume UI
+- Server-backed portal session cookie with payment revalidation on reconnect
+- Browser session countdown, previous-session reconnect UI, and session expiry handling
 - Signed Relworx webhook verification
 - Integration status page at /admin/integrations
 
@@ -35,6 +36,13 @@ Never commit .env.local or payment credentials.
 MobiFlow is currently being built as the customer-facing captive-portal/payment experience without a MikroTik or other network-enforcement integration. The browser session countdown is a temporary UI/session layer for this stage; it does not by itself grant or revoke network access.
 
 When a router/hotspot is introduced later, the successful payment event should be connected to the network authorization/session layer rather than trusting localStorage as the source of access.
+
+
+## Current portal session model
+
+For the current no-router stage, a confirmed Relworx payment can create a signed, HttpOnly portal session cookie. Returning to the portal revalidates that payment with Relworx before restoring the session. This provides reconnect/session continuity without MikroTik.
+
+This session currently represents the portal's access state only. A router/hotspot integration is still required later to enforce real network access, MAC/client authorization, bandwidth/data limits, and forced logout at the network layer.
 
 ## Vercel
 
