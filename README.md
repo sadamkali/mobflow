@@ -1,21 +1,30 @@
-# MobiFlow Uganda landing page
+# MobiFlow Uganda
 
-A modern glassmorphism Next.js starter for Uganda-focused mobile money payments.
+Next.js landing page and Relworx Mobile Money integration prepared for Uganda.
 
-## Included
-- Landing page with UGX 1,000 / 2,000 / 3,000 / 4,000 / 5,000 / 10,000 packages
-- MTN + Airtel selection UI
-- Ugandan mobile number validation
-- Payment checkout page at `/payment`
-- Payment integration configuration UI at `/admin/integrations`
-- Server-side secret placeholders in `.env.example`
-- Responsive layout without external icon libraries
+Includes:
+- Glassmorphism landing page
+- UGX 1,000 / 2,000 / 3,000 / 4,000 / 5,000 / 10,000 packages
+- MTN + Airtel Mobile Money checkout
+- Server-side Relworx API v2 requests
+- Uganda MSISDN normalization and Relworx validation
+- Transaction status polling
+- Signed Relworx webhook verification
+- Integration status page at /admin/integrations
 
-## Run
-```bash
+Local:
 npm install
+Copy-Item .env.example .env.local
 npm run dev
-```
 
-## Production payment backend
-Connect the integration form to an authenticated admin endpoint. Store provider credentials server-side, validate signed webhooks, create payment requests server-side, and expose a small provider adapter so the UI does not depend directly on a gateway.
+Required server environment variables:
+RELWORX_API_BASE_URL=https://payments.relworx.com/api
+RELWORX_API_KEY=
+RELWORX_ACCOUNT_NO=
+RELWORX_WEBHOOK_SECRET=
+RELWORX_WEBHOOK_URL=https://YOUR-DOMAIN.com/api/payments/webhook
+
+Never commit .env.local or payment credentials.
+
+Production note:
+Before granting any purchased package/value, add a persistent database-backed orders table and payment_events table. Use an idempotency check keyed by the Relworx internal/customer reference so repeated webhooks cannot credit the same purchase twice.
