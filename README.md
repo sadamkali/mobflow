@@ -26,5 +26,9 @@ RELWORX_WEBHOOK_URL=https://YOUR-DOMAIN.com/api/payments/webhook
 
 Never commit .env.local or payment credentials.
 
+## Vercel
+
+The repository includes a root `vercel.json` that explicitly selects Next.js and the root build commands. Deploy this repository from its root; the `app` directory is at the repository root.
+
 Production note:
 Before granting any purchased package/value, add a persistent database-backed orders table and payment_events table. Use an idempotency check keyed by the Relworx internal/customer reference so repeated webhooks cannot credit the same purchase twice.
