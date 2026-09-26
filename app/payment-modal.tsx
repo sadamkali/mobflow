@@ -14,7 +14,7 @@ export type PortalSession = {
   expiresAt: number;
 };
 
-type PaymentState = "idle" | "validating" | "starting" | "pending" | "success" | "failed";
+type PaymentState = "idle" | "validating" | "starting" | "pending" | "activating" | "success" | "failed";
 
 type PaymentModalProps = {
   open: boolean;
@@ -51,7 +51,7 @@ export default function PaymentModal({
   );
 
   const processing =
-    state === "validating" || state === "starting" || state === "pending";
+    state === "validating" || state === "starting" || state === "pending" || state === "activating";
 
   useEffect(() => {
     if (!open) return;
@@ -195,20 +195,33 @@ export default function PaymentModal({
     }
   }
 
-  function continueToSession() {
+  async function continueToSession() {
     if (state !== "success" || !internalReference) return;
 
-    const confirmedAt = Date.now();
-    onSuccess({
-      internalReference,
-      packageId: selected.id,
-      label: selected.label,
-      durationLabel: selected.durationLabel,
-      amount: selected.amount,
-      phone: maskPhone(msisdn),
-      confirmedAt,
-      expiresAt: confirmedAt + selected.durationSeconds * 1000,
-    });
+    try {
+      setState("activating");
+      const response = await fetch("/api/portal/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ internalReference }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.active || !data.session) {
+        throw new Error(
+          data.message || "Payment is confirmed, but the portal session could not be created.",
+        );
+      }
+
+      onSuccess(data.session);
+    } catch (err) {
+      setState("failed");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to activate the portal session.",
+      );
+    }
   }
 
   function closeModal() {
@@ -235,8 +248,8 @@ export default function PaymentModal({
             <span className="payment-processing-label">Payment confirmed</span>
             <h2 id="payment-modal-title">You&apos;re ready to connect</h2>
             <p>
-              Your {selected.durationLabel.toLowerCase()} bundle is active from
-              this payment.
+              Payment is confirmed. Your {selected.durationLabel.toLowerCase()} access session
+              is ready.
             </p>
 
             <div className="modal-package">
@@ -283,21 +296,6 @@ export default function PaymentModal({
                 {error}
               </div>
             )}
-
-            <div className="field full">
-              <label htmlFor="modal-package">Internet bundle</label>
-              <select
-                id="modal-package"
-                value={packageId}
-                onChange={(event) => setPackageId(event.target.value as PackageId)}
-              >
-                {PACKAGES.map((pkg) => (
-                  <option key={pkg.id} value={pkg.id} style={{ color: "#0f172a" }}>
-                    {pkg.durationLabel} — UGX {money.format(pkg.amount)}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="field full modal-phone-field">
               <label htmlFor="modal-msisdn">MTN or Airtel number</label>
@@ -347,19 +345,25 @@ export default function PaymentModal({
                   ? "Checking your number"
                   : state === "starting"
                     ? "Sending payment request"
-                    : "Checking payment"}
+                    : state === "activating"
+                      ? "Activating your access"
+                      : "Checking payment"}
               </span>
               <h3>
                 {state === "pending"
                   ? "Waiting for your approval"
                   : state === "starting"
                     ? "Opening your mobile-money prompt"
-                    : "Please wait a moment"}
+                    : state === "activating"
+                      ? "Saving your portal session"
+                      : "Please wait a moment"}
               </h3>
               <p>
                 {state === "pending"
                   ? "Approve the request on your phone. We&apos;ll keep checking the payment in the background."
-                  : "Your payment is being checked securely. Please keep this window open."}
+                  : state === "activating"
+                    ? "Your payment is confirmed. We&apos;re preparing your session so you can return to the portal later."
+                    : "Your payment is being checked securely. Please keep this window open."}
               </p>
               {state === "pending" && (
                 <>
