@@ -202,13 +202,26 @@ export async function GET() {
       return NextResponse.json({ active: false });
     }
 
-    const verified = await verifyPayment(payload.internalReference);
-    if (!verified || verified.payload.packageId !== payload.packageId) {
+    const pkg = getPackage(payload.packageId);
+    if (!pkg || payload.expiresAt <= Date.now()) {
       cookieStore.delete(COOKIE_NAME);
       return NextResponse.json({ active: false });
     }
 
-    const session = publicSession(verified.payload, verified.msisdn);
+    const result = await checkRequestStatus(payload.internalReference);
+    const status = providerStatus(result);
+    const amount = Number(result.amount);
+
+    if (
+      !["success", "successful", "completed", "complete"].includes(status) ||
+      !Number.isFinite(amount) ||
+      amount !== pkg.amount
+    ) {
+      cookieStore.delete(COOKIE_NAME);
+      return NextResponse.json({ active: false });
+    }
+
+    const session = publicSession(payload, result.msisdn ?? result.customer_msisdn ?? null);
     return NextResponse.json({ active: true, session });
   } catch (error) {
     return NextResponse.json(
