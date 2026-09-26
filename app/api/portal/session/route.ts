@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { getPackage } from "@/lib/packages";
+import { getPackage, PACKAGES } from "@/lib/packages";
 import { checkRequestStatus } from "@/lib/relworx";
 
 export const runtime = "nodejs";
@@ -116,9 +116,7 @@ async function verifyPayment(internalReference: string) {
   const amount = Number(result.amount);
   if (!Number.isFinite(amount)) return null;
 
-  const pkg = [...(await import("@/lib/packages")).PACKAGES].find(
-    (item) => item.amount === amount,
-  );
+  const pkg = PACKAGES.find((item) => item.amount === amount);
   if (!pkg) return null;
 
   const confirmedAt = completedTimestamp(result);
