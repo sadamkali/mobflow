@@ -130,7 +130,7 @@ export async function requestPayment(input: {
     "<Method>acdepositfunds</Method>" +
     "<NonBlocking>TRUE</NonBlocking>" +
     "<Account>" +
-    escapeXml(input.msisdn) +
+    escapeXml(input.msisdn.replace(/^\+/, "")) +
     "</Account>" +
     "<Amount>" +
     String(input.amount) +
