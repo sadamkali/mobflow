@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getPackage } from "@/lib/packages";
 import { normalizeUgandaMsisdn } from "@/lib/phone";
-import { requestPayment } from "@/lib/yo";
+import { requestPayment, yoEnvironment } from "@/lib/yo";
 
 export const runtime = "nodejs";
 
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         providerStatus: result.TransactionStatus || null,
         message:
           "Yo! is still resolving this payment request. We will keep checking its status.",
+        environment: yoEnvironment(),
       });
     }
 
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       msisdn,
       status: "pending",
       providerStatus: result.TransactionStatus || null,
+      environment: yoEnvironment(),
       message: "Payment request sent. Waiting for confirmation.",
     });
   } catch (error) {
