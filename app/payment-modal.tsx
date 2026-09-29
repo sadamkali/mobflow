@@ -203,7 +203,7 @@ export default function PaymentModal({
       const response = await fetch("/api/portal/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ internalReference }),
+        body: JSON.stringify({ internalReference, msisdn }),
       });
       const data = await response.json();
 
