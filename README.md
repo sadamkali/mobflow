@@ -12,7 +12,7 @@ Includes:
 - Uganda MSISDN normalization
 - Background payment status polling with processing states
 - Signed HttpOnly portal-session cookie with payment revalidation on reconnect
-- Yo! Payments success/failure webhook verification
+- Background payment status polling using Yo! Payments transaction references
 - Integration status page at /admin/integrations
 
 ## Yo! Payments setup
@@ -29,8 +29,6 @@ YO_ENVIRONMENT=sandbox
 YO_API_BASE_URL=https://sandbox.yo.co.ug/services/yopaymentsdev/task.php
 YO_API_USERNAME=
 YO_API_PASSWORD=
-YO_INSTANT_NOTIFICATION_URL=https://YOUR-DOMAIN.com/api/payments/webhook
-YO_FAILURE_NOTIFICATION_URL=https://YOUR-DOMAIN.com/api/payments/webhook
 PORTAL_SESSION_SECRET=
 
 For production, switch YO_ENVIRONMENT to production and use the production API configuration supplied by Yo!.
