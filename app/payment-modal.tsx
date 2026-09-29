@@ -43,6 +43,7 @@ export default function PaymentModal({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [internalReference, setInternalReference] = useState("");
+  const [paymentEnvironment, setPaymentEnvironment] = useState<"sandbox" | "production">("sandbox");
   const phoneRef = useRef<HTMLInputElement>(null);
 
   const selected = useMemo(
@@ -61,6 +62,7 @@ export default function PaymentModal({
     setError("");
     setMessage("");
     setInternalReference("");
+    setPaymentEnvironment("sandbox");
 
     const focusTimer = window.setTimeout(() => phoneRef.current?.focus(), 100);
     return () => window.clearTimeout(focusTimer);
@@ -185,6 +187,9 @@ export default function PaymentModal({
       }
 
       setInternalReference(initiateData.internalReference);
+      setPaymentEnvironment(
+        initiateData.environment === "production" ? "production" : "sandbox",
+      );
       setMessage("Payment request sent. Approve it on your phone.");
       setState("pending");
     } catch (err) {
