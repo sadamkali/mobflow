@@ -1,11 +1,9 @@
 import Link from "next/link";
 
 const configs = [
-  ["YO_API_BASE_URL", process.env.YO_API_BASE_URL, "Yo! Payments API endpoint"],
+  ["YO_API_BASE_URL", process.env.YO_API_BASE_URL || "https://sandbox.yo.co.ug/services/yopaymentsdev/task.php", "Yo! Payments API endpoint"],
   ["YO_API_USERNAME", process.env.YO_API_USERNAME, "Server-only Yo! API username"],
   ["YO_API_PASSWORD", process.env.YO_API_PASSWORD, "Server-only Yo! API password"],
-  ["YO_INSTANT_NOTIFICATION_URL", process.env.YO_INSTANT_NOTIFICATION_URL, "Success notification URL"],
-  ["YO_FAILURE_NOTIFICATION_URL", process.env.YO_FAILURE_NOTIFICATION_URL, "Failure notification URL"],
   ["PORTAL_SESSION_SECRET", process.env.PORTAL_SESSION_SECRET, "Secret used to sign portal sessions"],
 ];
 export default function IntegrationsPage() {
