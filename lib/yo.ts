@@ -8,9 +8,6 @@ export function yoEnvironment() {
 }
 
 function apiUrl() {
-  const configured = process.env.YO_API_BASE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-
   return yoEnvironment() === "production"
     ? DEFAULT_PRODUCTION_URL
     : DEFAULT_SANDBOX_URL;
@@ -23,6 +20,15 @@ function credentials() {
   if (!username || !password) {
     throw new Error(
       "Yo! Payments is not configured. Set YO_API_USERNAME and YO_API_PASSWORD.",
+    );
+  }
+
+  if (
+    yoEnvironment() === "production" &&
+    process.env.YO_LIVE_PAYMENTS_ENABLED !== "true"
+  ) {
+    throw new Error(
+      "Live Yo! Payments are disabled. Set YO_LIVE_PAYMENTS_ENABLED=true only when you are ready to process real payments.",
     );
   }
 
