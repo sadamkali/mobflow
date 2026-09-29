@@ -3,11 +3,15 @@ const DEFAULT_SANDBOX_URL =
 const DEFAULT_PRODUCTION_URL =
   "https://paymentsapi1.yo.co.ug/ybs/task.php";
 
+export function yoEnvironment() {
+  return process.env.YO_ENVIRONMENT === "production" ? "production" : "sandbox";
+}
+
 function apiUrl() {
   const configured = process.env.YO_API_BASE_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
-  return process.env.YO_ENVIRONMENT === "production"
+  return yoEnvironment() === "production"
     ? DEFAULT_PRODUCTION_URL
     : DEFAULT_SANDBOX_URL;
 }
