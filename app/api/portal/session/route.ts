@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getPackage, PACKAGES } from "@/lib/packages";
-import { checkRequestStatus } from "@/lib/relworx";
+import { checkRequestStatus, normalizeYoStatus } from "@/lib/yo";
 
 export const runtime = "nodejs";
 
@@ -13,11 +13,11 @@ type SessionPayload = {
   packageId: string;
   confirmedAt: number;
   expiresAt: number;
+  msisdn?: string;
 };
 
 function sessionSecret() {
-  const secret =
-    process.env.PORTAL_SESSION_SECRET || process.env.RELWORX_WEBHOOK_SECRET;
+  const secret = process.env.PORTAL_SESSION_SECRET;
   if (!secret) {
     throw new Error(
       "PORTAL_SESSION_SECRET is not configured. Set it in the server environment.",
@@ -71,22 +71,15 @@ function verifyToken(token: string): SessionPayload | null {
   }
 }
 
-function providerStatus(result: Record<string, unknown>) {
-  return String(result.request_status ?? result.status ?? "").toLowerCase();
-}
-
 function completedTimestamp(result: Record<string, unknown>) {
-  const value = result.completed_at ?? result.completedAt;
+  const value = result.TransactionCompletionDate;
   if (!value) return Date.now();
 
   const timestamp = new Date(String(value)).getTime();
   return Number.isFinite(timestamp) ? timestamp : Date.now();
 }
 
-function publicSession(
-  payload: SessionPayload,
-  msisdn?: unknown,
-) {
+function publicSession(payload: SessionPayload) {
   const pkg = getPackage(payload.packageId);
   if (!pkg) return null;
 
@@ -97,23 +90,23 @@ function publicSession(
     durationLabel: pkg.durationLabel,
     amount: pkg.amount,
     phone:
-      typeof msisdn === "string" && msisdn.length >= 7
-        ? msisdn.slice(0, 4) + "****" + msisdn.slice(-3)
+      payload.msisdn && payload.msisdn.length >= 7
+        ? payload.msisdn.slice(0, 4) + "****" + payload.msisdn.slice(-3)
         : "Mobile Money",
     confirmedAt: payload.confirmedAt,
     expiresAt: payload.expiresAt,
   };
 }
 
-async function verifyPayment(internalReference: string) {
+async function verifyPayment(internalReference: string, msisdn?: string) {
   const result = await checkRequestStatus(internalReference);
-  const status = providerStatus(result);
+  const status = normalizeYoStatus(result.TransactionStatus);
 
-  if (!["success", "successful", "completed", "complete"].includes(status)) {
+  if (status !== "success") {
     return null;
   }
 
-  const amount = Number(result.amount);
+  const amount = Number(result.Amount);
   if (!Number.isFinite(amount)) return null;
 
   const pkg = PACKAGES.find((item) => item.amount === amount);
@@ -130,8 +123,9 @@ async function verifyPayment(internalReference: string) {
       packageId: pkg.id,
       confirmedAt,
       expiresAt,
+      msisdn,
     } satisfies SessionPayload,
-    msisdn: result.msisdn ?? result.customer_msisdn ?? null,
+    msisdn,
   };
 }
 
@@ -139,6 +133,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const internalReference = String(body?.internalReference ?? "").trim();
+    const msisdn = String(body?.msisdn ?? "").trim();
 
     if (!internalReference) {
       return NextResponse.json(
@@ -147,7 +142,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const verified = await verifyPayment(internalReference);
+    const verified = await verifyPayment(internalReference, msisdn || undefined);
     if (!verified) {
       return NextResponse.json(
         { active: false, message: "Payment could not be confirmed for a portal session." },
@@ -170,7 +165,7 @@ export async function POST(request: Request) {
       maxAge,
     });
 
-    const session = publicSession(verified.payload, verified.msisdn);
+    const session = publicSession(verified.payload);
 
     return NextResponse.json({ active: true, session });
   } catch (error) {
@@ -209,19 +204,15 @@ export async function GET() {
     }
 
     const result = await checkRequestStatus(payload.internalReference);
-    const status = providerStatus(result);
-    const amount = Number(result.amount);
+    const status = normalizeYoStatus(result.TransactionStatus);
+    const amount = Number(result.Amount);
 
-    if (
-      !["success", "successful", "completed", "complete"].includes(status) ||
-      !Number.isFinite(amount) ||
-      amount !== pkg.amount
-    ) {
+    if (status !== "success" || !Number.isFinite(amount) || amount !== pkg.amount) {
       cookieStore.delete(COOKIE_NAME);
       return NextResponse.json({ active: false });
     }
 
-    const session = publicSession(payload, result.msisdn ?? result.customer_msisdn ?? null);
+    const session = publicSession(payload);
     return NextResponse.json({ active: true, session });
   } catch (error) {
     return NextResponse.json(
