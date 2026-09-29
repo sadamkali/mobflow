@@ -33,16 +33,36 @@ export async function POST(request: Request) {
       narrative: "MobiFlow " + pkg.durationLabel + " Wi-Fi access",
     });
 
+    const providerMessage =
+      result.ErrorMessage ||
+      result.StatusMessage ||
+      "Yo! Payments rejected the payment request.";
+
+    const isIndeterminate =
+      /indeterminate/i.test(providerMessage) ||
+      /indeterminate/i.test(result.TransactionStatus || "");
+
+    if (isIndeterminate) {
+      // Yo! can return an INDETERMINATE response when the gateway cannot
+      // immediately determine whether the request reached the mobile-money
+      // network. Keep the same external reference and let the status endpoint
+      // resolve it rather than telling the customer to submit another request.
+      return NextResponse.json({
+        ok: true,
+        reference,
+        internalReference: reference,
+        transactionReference: result.TransactionReference || null,
+        amount: pkg.amount,
+        msisdn,
+        status: "pending",
+        providerStatus: result.TransactionStatus || null,
+        message:
+          "Yo! is still resolving this payment request. We will keep checking its status.",
+      });
+    }
+
     if (result.Status !== "OK" || !result.TransactionReference) {
-      return NextResponse.json(
-        {
-          message:
-            result.ErrorMessage ||
-            result.StatusMessage ||
-            "Yo! Payments rejected the payment request.",
-        },
-        { status: 502 },
-      );
+      return NextResponse.json({ message: providerMessage }, { status: 502 });
     }
 
     return NextResponse.json({
@@ -53,6 +73,8 @@ export async function POST(request: Request) {
       amount: pkg.amount,
       msisdn,
       status: "pending",
+      providerStatus: result.TransactionStatus || null,
+      message: "Payment request sent. Waiting for confirmation.",
     });
   } catch (error) {
     return NextResponse.json(
