@@ -333,16 +333,16 @@ export default function PaymentModal({
               </span>
               <h3>
                 {state === "pending"
-                  ? "Waiting for your approval"
+                  ? "Waiting for payment confirmation"
                   : state === "starting"
-                    ? "Opening your mobile-money prompt"
+                    ? "Sending payment request"
                     : state === "activating"
                       ? "Saving your portal session"
                       : "Please wait a moment"}
               </h3>
               <p>
                 {state === "pending"
-                  ? "Approve the request on your phone. We&apos;ll keep checking the payment in the background."
+                  ? "Approve the request on your phone if one appears. We&apos;ll keep checking the payment in the background."
                   : state === "activating"
                     ? "Your payment is confirmed. We&apos;re preparing your session so you can return to the portal later."
                     : "Your payment is being checked securely. Please keep this window open."}
@@ -352,7 +352,7 @@ export default function PaymentModal({
                   <span className="processing-amount">
                     UGX {money.format(selected.amount)}
                   </span>
-                  <span className="processing-note">This can take a few seconds.</span>
+                  <span className="processing-note">We&apos;ll check the payment status before giving you access.</span>
                 </>
               )}
             </div>
